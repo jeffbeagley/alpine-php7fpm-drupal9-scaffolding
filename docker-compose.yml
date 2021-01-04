@@ -1,0 +1,65 @@
+version: '3'
+
+services:
+    web:
+        container_name: '${PROJECT_NAME}_web'
+        build:
+            context: ./
+            dockerfile: dockerfile
+        volumes:
+            - ./web/public_html:/var/www/public_html:cached
+            - ./storage:/var/www/storage:cached
+            - ./config:/var/www/config:cached
+        links:
+            - db:db
+        ports:
+            - '80:80'
+        networks:
+            - local
+
+    db:
+        container_name: '${PROJECT_NAME}_db'
+        image: mariadb:10.5.3
+        ports:
+            - '3306:3306'
+        environment:
+            MYSQL_DATABASE: ${MYSQL_DATABASE}
+            MYSQL_USER: ${MYSQL_USER}
+            MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+            MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+        volumes:
+            - sql:/var/lib/mysql
+            - ./docker/db/manual_sql_dumps:/var/lib/mysql/dumps
+        command: ['--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci']
+        networks:
+            - local
+
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        links:
+            - db:db
+        restart: always
+        ports:
+            - 8181:80
+        environment:
+            PMA_HOST: db
+            PMA_PORT: 3306
+        networks:
+            - local
+
+    ide:
+        container_name: '${PROJECT_NAME}_ide'
+        image: mobomo/vscode_php:1.2.0
+        volumes:
+          - ./:/home/coder/project
+        ports:
+            - '8080:8080'
+        networks:
+            - local
+
+volumes:
+    sql:
+
+networks:
+    local:
+        driver: bridge
